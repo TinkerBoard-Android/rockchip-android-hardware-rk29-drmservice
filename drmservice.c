@@ -38,6 +38,7 @@ extern int delete_module(const char *, unsigned int);
 
 static char sn_buf_auto[SERIALNO_BUF_LEN] = {0};
 static char sn_buf_idb[SERIALNO_BUF_LEN] = {0};
+static char sn_buf_eeprom[SERIALNO_BUF_LEN] = {0};
 static char hid_buf_idb[SERIALNO_BUF_LEN] = {0};
 
 //add by xzj to support DRM,including read SN,read userdefine data, auto SN,detect keybox
@@ -84,7 +85,8 @@ typedef		unsigned char	    uint8;
 
 #define DEBUG_LOG 0   //open debug info
 
-#define SERIALNO_FROM_IDB 1  //if 1 read sn from idb3;  if 0 generate sn auto
+#define SERIALNO_FROM_IDB 0  //if 1 read sn from idb3;  if 0 read sn from eeprom
+#define SERIALNO_FROM_EEPROM 1  //if 1 read sn from eeprom;  if 0 generate sn auto
 
 #define SET_IFACE_DELAY                 300000
 #define SET_IFACE_POLLING_LOOP          20
@@ -407,7 +409,28 @@ int rknand_sys_storage_test_hid(void)
     return 0;
 }
 
+int eeprom_read_sn(void)
+{
+    int count = 0;
+    memset(sn_buf_eeprom,0,sizeof(sn_buf_eeprom));
 
+    FILE* f;
+    f = fopen("/sys/bus/i2c/devices/8-0050/eeprom", "rb");
+    if (f == NULL) {
+        SLOGE("eeprom open fail %s\n", strerror(errno));
+        return -1;
+    }
+
+    fseek( f, 6, SEEK_SET);
+    count = fread(sn_buf_eeprom, 15, 1, f);
+
+    if (fclose(f) != 0) {
+        SLOGE("Failed closing eeprom %s\n", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
 
 int vendor_storage_read_sn(void)
 {
@@ -573,7 +596,7 @@ static int rmmod(const char *modname)
 int is_serialno_valid(char* serialno)
 {
 #ifdef ENABLE_SN_VERIFY
-    if ((strlen(serialno) < 6) || (strlen(serialno) > 14)) {
+    if ((strlen(serialno) < 6) || (strlen(serialno) > 15)) {
         SLOGE("serialno is too short or too long, please check!");
         return 0;
     }
@@ -1021,6 +1044,18 @@ int main( int argc, char *argv[] )
 #else
             property_set("vendor.serialno", sn_buf_idb);
             write_serialno2kernel(sn_buf_idb);
+#endif
+        } else {
+            goto RANDOM_SN;
+        }
+    } else if(SERIALNO_FROM_EEPROM) {
+        eeprom_read_sn();
+        if (is_serialno_valid(sn_buf_eeprom)) {
+#ifdef ENABLE_CMDLINE_VERIFY
+            update_serialno(sn_buf_eeprom);
+#else
+            property_set("vendor.serialno", sn_buf_eeprom);
+            write_serialno2kernel(sn_buf_eeprom);
 #endif
         } else {
             goto RANDOM_SN;
