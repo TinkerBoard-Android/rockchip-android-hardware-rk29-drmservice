@@ -789,7 +789,7 @@ void detect_secure_boot()
         return;
     }
     read(fd, buf, sizeof(buf) - 1);
-    if(strstr(buf,"SecureBootCheckOk=1")!=NULL){
+    if(strstr(buf,"fuse.programmed=1")!=NULL){
         if(DEBUG_LOG) SLOGE("------detect SecureBoot-----");
         property_set("vendor.secureboot","true");
     }else{
@@ -1043,7 +1043,7 @@ RANDOM_SN:
     property_set("drm.service.enabled","false");
     SLOGE("detect keybox disabled");
 }*/
-    //detect_secure_boot();
+    detect_secure_boot();
     //Only set 'ro.boot.copy_oem = true', run this.
     if (strcmp(propbuf_copy_oem, "true") == 0) {
         char prop_buf[PROPERTY_VALUE_MAX];
