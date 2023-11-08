@@ -595,7 +595,7 @@ static int rmmod(const char *modname)
 // return 0, which means invalid
 int is_serialno_valid(char* serialno)
 {
-    if ((strlen(serialno) < 6) || (strlen(serialno) > 16)) {
+    if ((strlen(serialno) < 6) || (strlen(serialno) > 15)) {
         SLOGE("serialno is too short or too long, please check!");
         return 0;
     }
@@ -1054,17 +1054,7 @@ int main( int argc, char *argv[] )
             write_serialno2kernel(sn_buf_eeprom);
 #endif
         } else {
-            vendor_storage_read_sn();
-            if (is_serialno_valid(sn_buf_idb)) {
-#ifdef ENABLE_CMDLINE_VERIFY
-                update_serialno(sn_buf_idb);
-#else
-                property_set("vendor.serialno", sn_buf_idb);
-                write_serialno2kernel(sn_buf_idb);
-#endif
-            } else {
-                goto RANDOM_SN;
-            }
+            goto RANDOM_SN;
         }
     }
     else//auto generate serialno
